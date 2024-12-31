@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIP/Lump Sum Predictor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7f9fc;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #007bff;
+    }
+
+    form label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    form input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #results {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SIP/Lump Sum Goal Predictor</h1>
+    <form id="calculator-form">
+      <label for="goal">Goal Amount (₹):</label>
+      <input type="number" id="goal" required>
+      
+      <label for="return">Expected Annual Return (%):</label>
+      <input type="number" id="return" step="0.01" required>
+      
+      <label for="duration">Duration (Years):</label>
+      <input type="number" id="duration" required>
+      
+      <button type="button" onclick="calculate()">Calculate</button>
+    </form>
+    <div id="results">
+      <p id="sip-result"></p>
+      <p id="lump-result"></p>
+    </div>
+    <canvas id="growthChart"></canvas>
+  </div>
+  <script>
+    function calculate() {
+      const goalAmount = parseFloat(document.getElementById("goal").value);
+      const annualReturn = parseFloat(document.getElementById("return").value) / 100;
+      const durationYears = parseInt(document.getElementById("duration").value);
+
+      if (!goalAmount || !annualReturn || !durationYears) {
+        alert("Please fill all fields!");
+        return;
+      }
+
+      // SIP Formula: A = P * [(1 + r/n)^(nt) - 1] / (r/n)
+      const monthlyRate = annualReturn / 12;
+      const months = durationYears * 12;
+      const sipAmount = goalAmount / (((1 + monthlyRate) ** months - 1) / monthlyRate);
+
+      // Lump Sum Formula: A = P * (1 + r)^t
+      const lumpSum = goalAmount / (1 + annualReturn) ** durationYears;
+
+      // Update Results
+      document.getElementById("sip-result").textContent = `Monthly SIP Required: ₹${sipAmount.toFixed(2)}`;
+      document.getElementById("lump-result").textContent = `Lump Sum Investment Required: ₹${lumpSum.toFixed(2)}`;
+
+      // Year-on-Year Growth Data
+      const yearLabels = [];
+      const sipGrowth = [];
+      const lumpGrowth = [];
+      let accumulatedSIP = 0;
+
+      for (let year = 1; year <= durationYears; year++) {
+        yearLabels.push(`Year ${year}`);
+
+        // Lump Sum Growth
+        const lumpSumYearly = lumpSum * (1 + annualReturn) ** year;
+        lumpGrowth.push(lumpSumYearly.toFixed(2));
+
+        // SIP Growth (Approximation by summing contributions and interest yearly)
+        accumulatedSIP += sipAmount * 12; // Contributions for the year
+        const sipYearly = accumulatedSIP * (1 + annualReturn);
+        accumulatedSIP = sipYearly; // Update accumulated amount
+        sipGrowth.push(sipYearly.toFixed(2));
+      }
+
+      // Render Chart
+      renderChart(yearLabels, sipGrowth, lumpGrowth);
+    }
+
+    function renderChart(labels, sipData, lumpData) {
+      const ctx = document.getElementById("growthChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "SIP Growth",
+              data: sipData,
+              borderColor: "#007bff",
+              fill: false,
+              tension: 0.1,
+            },
+            {
+              label: "Lump Sum Growth",
+              data: lumpData,
+              borderColor: "#28a745",
+              fill: false,
+              tension: 0.1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+          },
+        },
+      });
+    }
+  </script>
+</body>
+</html>
